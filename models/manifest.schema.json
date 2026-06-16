@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TheMindofAll Model Manifest",
+  "type": "object",
+  "required": ["version", "models"],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1
+    },
+    "updatedAt": {
+      "type": ["string", "null"],
+      "description": "UTC ISO-8601 timestamp for the last manifest update."
+    },
+    "models": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "task",
+          "path",
+          "format",
+          "runtime",
+          "license",
+          "source",
+          "createdAt",
+          "files"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9._-]*$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "task": {
+            "type": "string",
+            "description": "Example: embedding, classification, summarization, text-generation."
+          },
+          "path": {
+            "type": "string",
+            "description": "Repository-relative model folder path."
+          },
+          "format": {
+            "type": "string",
+            "description": "Example: transformers-js, safetensors, onnx, gguf, other."
+          },
+          "runtime": {
+            "type": "string",
+            "description": "Example: transformers.js, llama.cpp, pytorch, onnxruntime."
+          },
+          "license": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "description": "Original source, local lineage, or upstream model identifier."
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["path", "sizeBytes", "sha256", "lfsTracked"],
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "sizeBytes": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "sha256": {
+                  "type": "string"
+                },
+                "lfsTracked": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
