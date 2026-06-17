@@ -91,8 +91,19 @@ def is_lfs_tracked(path: Path) -> bool:
     return path.suffix.lower() in LFS_EXTENSIONS
 
 
+def should_ignore(path: Path) -> bool:
+    return any(part.startswith(".") or part == "__pycache__" for part in path.parts)
+
+
 def iter_files(root: Path) -> list[Path]:
-    return sorted(path for path in root.rglob("*") if path.is_file())
+    files: list[Path] = []
+    for path in root.rglob("*"):
+        relative = path.relative_to(root)
+        if should_ignore(relative):
+            continue
+        if path.is_file():
+            files.append(path)
+    return sorted(files)
 
 
 def inspect_source(source: Path) -> tuple[list[FileRecord], list[str]]:
@@ -190,7 +201,11 @@ def copy_model(source: Path, destination: Path, replace: bool) -> None:
         if not replace:
             raise ValueError(f"Destination already exists: {destination}. Use --replace to overwrite it.")
         shutil.rmtree(destination)
-    shutil.copytree(source, destination)
+
+    def ignore_hidden(_directory: str, names: list[str]) -> set[str]:
+        return {name for name in names if name.startswith(".") or name == "__pycache__"}
+
+    shutil.copytree(source, destination, ignore=ignore_hidden)
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
