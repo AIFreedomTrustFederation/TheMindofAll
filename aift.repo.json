@@ -1,0 +1,23 @@
+{
+  "schema": "https://aifreedomtrust.org/schemas/aift.repo.schema.json",
+  "name": "TheMindofAll",
+  "layer": "consciousness",
+  "role": "consciousness, metaphysics, and unified theory layer",
+  "workspacePath": "/data/data/com.termux/files/home/AIFT/TheMindofAll",
+  "federation": {
+    "workspace": "AIFT",
+    "controlPlane": "/data/data/com.termux/files/home/AIFT/aift-os.sh",
+    "manifest": "/data/data/com.termux/files/home/AIFT/manifests/workspace.json"
+  },
+  "commands": {
+    "status": "git status --short",
+    "pull": "git pull --ff-only",
+    "verify": "git status --short"
+  },
+  "standards": {
+    "localFirst": true,
+    "inspectable": true,
+    "sovereignByDefault": true,
+    "aiBehindProviderInterfaces": true
+  }
+}
