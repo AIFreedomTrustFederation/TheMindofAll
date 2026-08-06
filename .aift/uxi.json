@@ -1,0 +1,14 @@
+{
+  "schema": "aift.uxi.integration.v1",
+  "repository": "TheMindofAll",
+  "role": "model-registry",
+  "sources": [
+    {
+      "id": "models.local",
+      "kind": "json",
+      "path": "models/manifest.json",
+      "description": "Canonical registry of locally owned or locally runnable models.",
+      "status": "ready"
+    }
+  ]
+}
