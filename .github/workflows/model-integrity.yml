@@ -1,0 +1,47 @@
+{
+  "name": "Model Integrity",
+  "on": {
+    "push": {
+      "branches": ["main"]
+    },
+    "pull_request": {}
+  },
+  "permissions": {
+    "contents": "read"
+  },
+  "concurrency": {
+    "group": "model-integrity-${{ github.workflow }}-${{ github.ref }}",
+    "cancel-in-progress": true
+  },
+  "jobs": {
+    "validate": {
+      "runs-on": "ubuntu-latest",
+      "timeout-minutes": 10,
+      "steps": [
+        {
+          "name": "Check out repository without model downloads",
+          "uses": "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "with": {
+            "persist-credentials": false,
+            "lfs": false
+          }
+        },
+        {
+          "name": "Set up Python",
+          "uses": "actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c",
+          "with": {
+            "python-version": "3.13"
+          }
+        },
+        {
+          "name": "Compile manifest validator",
+          "run": "python -m py_compile scripts/validate_manifest.py"
+        },
+        {
+          "name": "Validate model provenance",
+          "run": "python scripts/validate_manifest.py"
+        }
+      ]
+    }
+  }
+}
