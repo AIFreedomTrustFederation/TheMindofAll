@@ -23,6 +23,33 @@ SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
 
 
+def matches_json_type(value: object, expected: str) -> bool:
+    type_checks = {
+        "array": lambda item: isinstance(item, list),
+        "boolean": lambda item: isinstance(item, bool),
+        "integer": lambda item: isinstance(item, int) and not isinstance(item, bool),
+        "null": lambda item: item is None,
+        "object": lambda item: isinstance(item, dict),
+        "string": lambda item: isinstance(item, str),
+    }
+    return expected in type_checks and type_checks[expected](value)
+
+
+def validate_property_types(
+    value: dict[str, object],
+    properties: dict[str, dict[str, object]],
+    label: str,
+    errors: list[str],
+) -> None:
+    for field, field_schema in properties.items():
+        if field not in value or "type" not in field_schema:
+            continue
+        expected = field_schema["type"]
+        allowed_types = expected if isinstance(expected, list) else [expected]
+        if not any(matches_json_type(value[field], item) for item in allowed_types):
+            errors.append(f"{label}.{field} must have schema type {expected!r}")
+
+
 def safe_relative(value: str) -> Path:
     path = Path(value)
     if path.is_absolute() or ".." in path.parts or not path.parts:
@@ -61,9 +88,13 @@ def validate() -> list[str]:
     errors: list[str] = []
     manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
     schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+    if not isinstance(manifest, dict):
+        return ["manifest must be an object"]
     model_schema = schema["properties"]["models"]["items"]
     required_model_fields = model_schema["required"]
-    required_file_fields = model_schema["properties"]["files"]["items"]["required"]
+    file_schema = model_schema["properties"]["files"]["items"]
+    required_file_fields = file_schema["required"]
+    validate_property_types(manifest, schema["properties"], "manifest", errors)
     if manifest.get("version") != 1:
         errors.append("manifest version must be 1")
 
@@ -73,9 +104,13 @@ def validate() -> list[str]:
 
     seen_models: set[str] = set()
     for model in models:
+        if not isinstance(model, dict):
+            errors.append(f"model entry must be an object: {model!r}")
+            continue
         for field in required_model_fields:
             if field not in model:
                 errors.append(f"model missing required field: {field}")
+        validate_property_types(model, model_schema["properties"], "model", errors)
 
         model_id = model.get("id")
         if not isinstance(model_id, str) or not ID_PATTERN.fullmatch(model_id):
@@ -91,10 +126,17 @@ def validate() -> list[str]:
         model_root = REPO_ROOT / expected_model_path
 
         seen_files: set[str] = set()
-        for record in model.get("files", []):
+        file_records = model.get("files", [])
+        if not isinstance(file_records, list):
+            continue
+        for record in file_records:
+            if not isinstance(record, dict):
+                errors.append(f"{model_id}: file record must be an object: {record!r}")
+                continue
             for field in required_file_fields:
                 if field not in record:
                     errors.append(f"{model_id}: file record missing required field: {field}")
+            validate_property_types(record, file_schema["properties"], f"{model_id}.file", errors)
 
             value = record.get("path")
             try:
