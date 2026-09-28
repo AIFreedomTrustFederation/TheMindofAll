@@ -112,6 +112,14 @@ def validate() -> list[str]:
             if bool(record.get("lfsTracked")) != is_lfs_tracked(repository_path):
                 errors.append(f"{model_id}/{normalized}: LFS declaration mismatch")
 
+        actual_files = {
+            path.relative_to(model_root).as_posix()
+            for path in model_root.rglob("*")
+            if path.is_file()
+        }
+        for unrecorded in sorted(actual_files - seen_files):
+            errors.append(f"{model_id}: unrecorded file: {unrecorded}")
+
     return errors
 
 
