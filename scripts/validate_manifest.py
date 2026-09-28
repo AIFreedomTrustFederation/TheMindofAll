@@ -6,6 +6,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -36,12 +37,23 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def artifact_identity(path: Path) -> tuple[int, str, bool]:
+def artifact_identity(path: Path) -> tuple[int, str]:
     data = path.read_bytes()
     pointer = LFS_PATTERN.fullmatch(data)
     if pointer:
-        return int(pointer.group(2)), pointer.group(1).decode("ascii"), True
-    return path.stat().st_size, sha256_file(path), False
+        return int(pointer.group(2)), pointer.group(1).decode("ascii")
+    return path.stat().st_size, sha256_file(path)
+
+
+def is_lfs_tracked(path: Path) -> bool:
+    result = subprocess.run(
+        ["git", "check-attr", "filter", "--", path.as_posix()],
+        cwd=REPO_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout.rstrip().endswith(": filter: lfs")
 
 
 def validate() -> list[str]:
@@ -88,7 +100,7 @@ def validate() -> list[str]:
                 errors.append(f"{model_id}: missing file: {normalized}")
                 continue
 
-            size, digest, is_pointer = artifact_identity(artifact)
+            size, digest = artifact_identity(artifact)
             if record.get("sizeBytes") != size:
                 errors.append(f"{model_id}/{normalized}: size mismatch")
             expected_digest = record.get("sha256")
@@ -96,7 +108,8 @@ def validate() -> list[str]:
                 errors.append(f"{model_id}/{normalized}: invalid SHA-256")
             elif expected_digest != digest:
                 errors.append(f"{model_id}/{normalized}: SHA-256 mismatch")
-            if bool(record.get("lfsTracked")) != is_pointer:
+            repository_path = expected_model_path / relative
+            if bool(record.get("lfsTracked")) != is_lfs_tracked(repository_path):
                 errors.append(f"{model_id}/{normalized}: LFS declaration mismatch")
 
     return errors
@@ -105,7 +118,7 @@ def validate() -> list[str]:
 def main() -> int:
     try:
         errors = validate()
-    except (OSError, json.JSONDecodeError, ValueError) as error:
+    except (OSError, subprocess.CalledProcessError, json.JSONDecodeError, ValueError) as error:
         print(f"manifest validation failed: {error}", file=sys.stderr)
         return 1
     if errors:
