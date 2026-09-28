@@ -13,6 +13,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_PATH = REPO_ROOT / "models" / "manifest.json"
+SCHEMA_PATH = REPO_ROOT / "models" / "manifest.schema.json"
 LFS_PATTERN = re.compile(
     rb"version https://git-lfs.github.com/spec/v1\n"
     rb"oid sha256:([0-9a-f]{64})\n"
@@ -59,6 +60,10 @@ def is_lfs_tracked(path: Path) -> bool:
 def validate() -> list[str]:
     errors: list[str] = []
     manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+    schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+    model_schema = schema["properties"]["models"]["items"]
+    required_model_fields = model_schema["required"]
+    required_file_fields = model_schema["properties"]["files"]["items"]["required"]
     if manifest.get("version") != 1:
         errors.append("manifest version must be 1")
 
@@ -68,6 +73,10 @@ def validate() -> list[str]:
 
     seen_models: set[str] = set()
     for model in models:
+        for field in required_model_fields:
+            if field not in model:
+                errors.append(f"model missing required field: {field}")
+
         model_id = model.get("id")
         if not isinstance(model_id, str) or not ID_PATTERN.fullmatch(model_id):
             errors.append(f"invalid model id: {model_id!r}")
@@ -83,6 +92,10 @@ def validate() -> list[str]:
 
         seen_files: set[str] = set()
         for record in model.get("files", []):
+            for field in required_file_fields:
+                if field not in record:
+                    errors.append(f"{model_id}: file record missing required field: {field}")
+
             value = record.get("path")
             try:
                 relative = safe_relative(value)
@@ -126,7 +139,13 @@ def validate() -> list[str]:
 def main() -> int:
     try:
         errors = validate()
-    except (OSError, subprocess.CalledProcessError, json.JSONDecodeError, ValueError) as error:
+    except (
+        KeyError,
+        OSError,
+        subprocess.CalledProcessError,
+        json.JSONDecodeError,
+        ValueError,
+    ) as error:
         print(f"manifest validation failed: {error}", file=sys.stderr)
         return 1
     if errors:
