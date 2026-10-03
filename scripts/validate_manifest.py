@@ -124,6 +124,9 @@ def validate() -> list[str]:
         if model.get("path") != expected_model_path.as_posix():
             errors.append(f"{model_id}: path must be {expected_model_path.as_posix()}")
         model_root = REPO_ROOT / expected_model_path
+        if model_root.is_symlink():
+            errors.append(f"{model_id}: model directory must not be a symbolic link")
+            continue
 
         seen_files: set[str] = set()
         file_records = model.get("files", [])
@@ -153,6 +156,14 @@ def validate() -> list[str]:
             artifact = model_root / relative
             if not artifact.is_file():
                 errors.append(f"{model_id}: missing file: {normalized}")
+                continue
+            if artifact.is_symlink():
+                errors.append(f"{model_id}/{normalized}: symbolic links are not allowed")
+                continue
+            try:
+                artifact.resolve().relative_to(model_root.resolve())
+            except ValueError:
+                errors.append(f"{model_id}/{normalized}: file resolves outside model directory")
                 continue
 
             size, digest = artifact_identity(artifact)
