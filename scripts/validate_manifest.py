@@ -8,6 +8,7 @@ import json
 import re
 import subprocess
 import sys
+from datetime import datetime, timedelta
 from pathlib import Path
 
 
@@ -60,6 +61,26 @@ def validate_known_properties(
         errors.append(f"{label} has unknown field: {field}")
 
 
+def validate_timestamp(
+    value: object,
+    label: str,
+    errors: list[str],
+    *,
+    require_utc: bool = False,
+) -> None:
+    if not isinstance(value, str):
+        return
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        errors.append(f"{label} must be an ISO-8601 timestamp")
+        return
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        errors.append(f"{label} must include a timezone offset")
+    elif require_utc and parsed.utcoffset() != timedelta(0):
+        errors.append(f"{label} must use UTC")
+
+
 def safe_relative(value: str) -> Path:
     path = Path(value)
     if path.is_absolute() or ".." in path.parts or not path.parts:
@@ -106,6 +127,9 @@ def validate() -> list[str]:
     required_file_fields = file_schema["required"]
     validate_known_properties(manifest, schema["properties"], "manifest", errors)
     validate_property_types(manifest, schema["properties"], "manifest", errors)
+    validate_timestamp(
+        manifest.get("updatedAt"), "manifest.updatedAt", errors, require_utc=True
+    )
     if manifest.get("version") != 1:
         errors.append("manifest version must be 1")
 
@@ -123,6 +147,7 @@ def validate() -> list[str]:
                 errors.append(f"model missing required field: {field}")
         validate_known_properties(model, model_schema["properties"], "model", errors)
         validate_property_types(model, model_schema["properties"], "model", errors)
+        validate_timestamp(model.get("createdAt"), "model.createdAt", errors)
 
         model_id = model.get("id")
         if not isinstance(model_id, str) or not ID_PATTERN.fullmatch(model_id):
