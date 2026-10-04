@@ -50,6 +50,16 @@ def validate_property_types(
             errors.append(f"{label}.{field} must have schema type {expected!r}")
 
 
+def validate_known_properties(
+    value: dict[str, object],
+    properties: dict[str, dict[str, object]],
+    label: str,
+    errors: list[str],
+) -> None:
+    for field in sorted(value.keys() - properties.keys()):
+        errors.append(f"{label} has unknown field: {field}")
+
+
 def safe_relative(value: str) -> Path:
     path = Path(value)
     if path.is_absolute() or ".." in path.parts or not path.parts:
@@ -94,6 +104,7 @@ def validate() -> list[str]:
     required_model_fields = model_schema["required"]
     file_schema = model_schema["properties"]["files"]["items"]
     required_file_fields = file_schema["required"]
+    validate_known_properties(manifest, schema["properties"], "manifest", errors)
     validate_property_types(manifest, schema["properties"], "manifest", errors)
     if manifest.get("version") != 1:
         errors.append("manifest version must be 1")
@@ -110,6 +121,7 @@ def validate() -> list[str]:
         for field in required_model_fields:
             if field not in model:
                 errors.append(f"model missing required field: {field}")
+        validate_known_properties(model, model_schema["properties"], "model", errors)
         validate_property_types(model, model_schema["properties"], "model", errors)
 
         model_id = model.get("id")
@@ -139,6 +151,9 @@ def validate() -> list[str]:
             for field in required_file_fields:
                 if field not in record:
                     errors.append(f"{model_id}: file record missing required field: {field}")
+            validate_known_properties(
+                record, file_schema["properties"], f"{model_id}.file", errors
+            )
             validate_property_types(record, file_schema["properties"], f"{model_id}.file", errors)
 
             value = record.get("path")
