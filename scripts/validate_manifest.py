@@ -24,6 +24,21 @@ SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
 
 
+def reject_duplicate_keys(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"duplicate JSON key: {key!r}")
+        result[key] = value
+    return result
+
+
+def load_json(path: Path) -> object:
+    return json.loads(
+        path.read_text(encoding="utf-8"), object_pairs_hook=reject_duplicate_keys
+    )
+
+
 def matches_json_type(value: object, expected: str) -> bool:
     type_checks = {
         "array": lambda item: isinstance(item, list),
@@ -117,8 +132,8 @@ def is_lfs_tracked(path: Path) -> bool:
 
 def validate() -> list[str]:
     errors: list[str] = []
-    manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
-    schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+    manifest = load_json(MANIFEST_PATH)
+    schema = load_json(SCHEMA_PATH)
     if not isinstance(manifest, dict):
         return ["manifest must be an object"]
     model_schema = schema["properties"]["models"]["items"]
@@ -245,7 +260,7 @@ def main() -> int:
         for error in errors:
             print(f"error: {error}", file=sys.stderr)
         return 1
-    manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+    manifest = load_json(MANIFEST_PATH)
     file_count = sum(len(model.get("files", [])) for model in manifest["models"])
     print(f"Validated {len(manifest['models'])} model and {file_count} file records.")
     return 0
