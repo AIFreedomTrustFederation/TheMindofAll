@@ -76,6 +76,11 @@ def validate_known_properties(
         errors.append(f"{label} has unknown field: {field}")
 
 
+def validate_nonempty_string(value: object, label: str, errors: list[str]) -> None:
+    if isinstance(value, str) and not value.strip():
+        errors.append(f"{label} must not be blank")
+
+
 def validate_timestamp(
     value: object,
     label: str,
@@ -162,6 +167,8 @@ def validate() -> list[str]:
                 errors.append(f"model missing required field: {field}")
         validate_known_properties(model, model_schema["properties"], "model", errors)
         validate_property_types(model, model_schema["properties"], "model", errors)
+        validate_nonempty_string(model.get("license"), "model.license", errors)
+        validate_nonempty_string(model.get("source"), "model.source", errors)
         validate_timestamp(model.get("createdAt"), "model.createdAt", errors)
 
         model_id = model.get("id")
