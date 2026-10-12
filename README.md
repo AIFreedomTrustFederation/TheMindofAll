@@ -77,6 +77,14 @@ git status --short
 
 As recorded in [`models/manifest.json`](models/manifest.json), the currently registered model is **`all-minilm-l6-v2-quantized`**, a quantized ONNX **embedding** model sourced from `Xenova/all-MiniLM-L6-v2` and intended for local Transformers.js loading. This is not a text-generation model, and a registry entry alone does not establish that a running inference service is installed or healthy.
 
+The repository's standard-library integrity check validates recorded model files, sizes, SHA-256 digests, and Git LFS pointer identities without loading entire model binaries into memory:
+
+```bash
+python scripts/validate_manifest.py
+```
+
+In a checkout containing only Git LFS pointers, this checks the recorded pointer identity, **not the actual downloaded model bytes**. Retrieve the model before claiming binary integrity.
+
 The model binary is stored at `models/all-minilm-l6-v2-quantized/onnx/model.onnx` and is tracked by Git LFS according to `.gitattributes`. After cloning, retrieve LFS objects and verify the actual binary against the manifest's recorded SHA-256:
 
 ```bash

@@ -2,7 +2,9 @@
   "name": "Model Integrity",
   "on": {
     "push": {
-      "branches": ["main"]
+      "branches": [
+        "main"
+      ]
     },
     "pull_request": {}
   },
@@ -40,6 +42,10 @@
         {
           "name": "Validate model provenance",
           "run": "python scripts/validate_manifest.py"
+        },
+        {
+          "name": "Test bounded-memory artifact verification",
+          "run": "python -B -m unittest discover -s tests -v"
         }
       ]
     }

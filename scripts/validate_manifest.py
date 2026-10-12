@@ -117,8 +117,10 @@ def sha256_file(path: Path) -> str:
 
 
 def artifact_identity(path: Path) -> tuple[int, str]:
-    data = path.read_bytes()
-    pointer = LFS_PATTERN.fullmatch(data)
+    # LFS pointer files are small; model binaries may be many gigabytes.
+    with path.open("rb") as handle:
+        prefix = handle.read(200)
+    pointer = LFS_PATTERN.fullmatch(prefix)
     if pointer:
         return int(pointer.group(2)), pointer.group(1).decode("ascii")
     return path.stat().st_size, sha256_file(path)
