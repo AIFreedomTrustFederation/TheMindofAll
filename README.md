@@ -73,6 +73,19 @@ git pull --ff-only
 git status --short
 ```
 
+### Current model inventory and integrity verification
+
+As recorded in [`models/manifest.json`](models/manifest.json), the currently registered model is **`all-minilm-l6-v2-quantized`**, a quantized ONNX **embedding** model sourced from `Xenova/all-MiniLM-L6-v2` and intended for local Transformers.js loading. This is not a text-generation model, and a registry entry alone does not establish that a running inference service is installed or healthy.
+
+The model binary is stored at `models/all-minilm-l6-v2-quantized/onnx/model.onnx` and is tracked by Git LFS according to `.gitattributes`. After cloning, retrieve LFS objects and verify the actual binary against the manifest's recorded SHA-256:
+
+```bash
+git lfs pull
+sha256sum models/all-minilm-l6-v2-quantized/onnx/model.onnx
+```
+
+The expected digest is `afdb6f1a0e45b715d0bb9b11772f032c399babd23bfc31fed1c170afc848bdb1`. A matching digest checks the downloaded bytes against the repository manifest; it does not independently authenticate the upstream publisher, prove license compliance, or validate inference quality. Inspect the model card and tokenizer/config files before integration.
+
 Large files require an additional truthfulness rule: do not pretend a model is in the repository when only its name is present. If the binary lives in Git LFS or external storage, the manifest and model card should make that relationship explicit.
 
 ---
