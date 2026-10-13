@@ -21,3 +21,9 @@ python scripts\import_model.py C:\path\to\model-folder `
 Run first with `--dry-run` to validate without copying.
 
 Use `--replace` only when intentionally replacing an existing model entry.
+
+The importer rejects overlapping source and destination paths (including the
+same folder, nested folders, and `--replace`), even during `--dry-run`. Import
+from a separate source folder outside the target `models/<model-id>` directory.
+A dry run does not prove that the later filesystem copy will complete; keep a
+backup before replacing a model because replacement is not transactional.

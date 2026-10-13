@@ -168,6 +168,18 @@ def ensure_safe_destination(destination: Path) -> None:
         raise ValueError(f"Refusing unsafe destination: {destination}")
 
 
+def ensure_nonoverlapping_paths(source: Path, destination: Path) -> None:
+    """Never copy a model onto itself or into/out of its own directory."""
+    resolved_source = source.resolve()
+    resolved_destination = destination.resolve()
+    if (
+        resolved_source == resolved_destination
+        or resolved_source in resolved_destination.parents
+        or resolved_destination in resolved_source.parents
+    ):
+        raise ValueError(f"Refusing overlapping source and destination: {source} -> {destination}")
+
+
 def update_manifest(args: argparse.Namespace, files: list[FileRecord], model_id: str) -> dict:
     manifest = load_manifest()
     existing = [model for model in manifest["models"] if model.get("id") == model_id]
@@ -197,6 +209,7 @@ def update_manifest(args: argparse.Namespace, files: list[FileRecord], model_id:
 
 def copy_model(source: Path, destination: Path, replace: bool) -> None:
     ensure_safe_destination(destination)
+    ensure_nonoverlapping_paths(source, destination)
     if destination.exists():
         if not replace:
             raise ValueError(f"Destination already exists: {destination}. Use --replace to overwrite it.")
@@ -234,6 +247,8 @@ def main(argv: list[str]) -> int:
     try:
         model_id = slugify(args.model_id or source.name)
         destination = MODELS_DIR / model_id
+        ensure_safe_destination(destination)
+        ensure_nonoverlapping_paths(source, destination)
         files, warnings = inspect_source(source)
         manifest = update_manifest(args, files, model_id)
 
