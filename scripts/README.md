@@ -18,6 +18,18 @@ python scripts\import_model.py C:\path\to\model-folder `
   --source-label local
 ```
 
-Run first with `--dry-run` to validate without copying.
+Run first with `--dry-run` to validate without copying. The importer rejects
+symbolic links to files or directories within the included source tree, rather
+than following them and potentially copying files outside the chosen folder.
+Hidden files and `__pycache__` directories are ignored by both the inspection
+and copy steps. Supply real, local model files instead of symlinks.
 
 Use `--replace` only when intentionally replacing an existing model entry.
+The replacement removes the existing model directory before copying, so keep a
+backup and do not treat replacement as an atomic operation.
+
+Offline importer regression tests:
+
+```bash
+python -B -m unittest discover -s tests -v
+```

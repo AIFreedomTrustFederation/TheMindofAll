@@ -101,6 +101,10 @@ def iter_files(root: Path) -> list[Path]:
         relative = path.relative_to(root)
         if should_ignore(relative):
             continue
+        # copytree follows links by default, including links to directories.
+        # Reject them before hashing or copying files outside the source tree.
+        if path.is_symlink():
+            raise ValueError(f"Source contains symbolic link: {relative.as_posix()}")
         if path.is_file():
             files.append(path)
     return sorted(files)
