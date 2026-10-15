@@ -195,8 +195,21 @@ def update_manifest(args: argparse.Namespace, files: list[FileRecord], model_id:
     return manifest
 
 
+def ensure_disjoint_source(source: Path, destination: Path) -> None:
+    """Reject self-import and recursive copies before changing model files."""
+    resolved_source = source.resolve()
+    resolved_destination = destination.resolve()
+    if (
+        resolved_source == resolved_destination
+        or resolved_source in resolved_destination.parents
+        or resolved_destination in resolved_source.parents
+    ):
+        raise ValueError("Source and destination directories must not overlap")
+
+
 def copy_model(source: Path, destination: Path, replace: bool) -> None:
     ensure_safe_destination(destination)
+    ensure_disjoint_source(source, destination)
     if destination.exists():
         if not replace:
             raise ValueError(f"Destination already exists: {destination}. Use --replace to overwrite it.")
@@ -234,6 +247,7 @@ def main(argv: list[str]) -> int:
     try:
         model_id = slugify(args.model_id or source.name)
         destination = MODELS_DIR / model_id
+        ensure_disjoint_source(source, destination)
         files, warnings = inspect_source(source)
         manifest = update_manifest(args, files, model_id)
 
