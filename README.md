@@ -83,7 +83,7 @@ The repository's standard-library integrity check validates recorded model files
 python scripts/validate_manifest.py
 ```
 
-In a checkout containing only Git LFS pointers, this checks the recorded pointer identity, **not the actual downloaded model bytes**. Retrieve the model before claiming binary integrity.
+In a checkout containing only Git LFS pointers, this checks the recorded pointer identity, **not the actual downloaded model bytes**. Retrieve the model before claiming binary integrity. Pointer identity is accepted only for paths actually configured for Git LFS; ordinary files such as `config.json` must be present as real bytes and are SHA-256 hashed. A Git LFS pointer substituted for an ordinary file causes validation to fail.
 
 The model binary is stored at `models/all-minilm-l6-v2-quantized/onnx/model.onnx` and is tracked by Git LFS according to `.gitattributes`. After cloning, retrieve LFS objects and verify the actual binary against the manifest's recorded SHA-256:
 
