@@ -12,7 +12,7 @@
   "commands": {
     "status": "git status --short",
     "pull": "git pull --ff-only",
-    "verify": "git status --short"
+    "verify": "python3 scripts/validate_manifest.py"
   },
   "standards": {
     "localFirst": true,
