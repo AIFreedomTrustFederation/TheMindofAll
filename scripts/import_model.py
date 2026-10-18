@@ -101,6 +101,8 @@ def iter_files(root: Path) -> list[Path]:
         relative = path.relative_to(root)
         if should_ignore(relative):
             continue
+        if path.is_symlink():
+            raise ValueError(f"Source contains symbolic link: {relative}")
         if path.is_file():
             files.append(path)
     return sorted(files)

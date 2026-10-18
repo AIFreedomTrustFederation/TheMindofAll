@@ -94,6 +94,8 @@ sha256sum models/all-minilm-l6-v2-quantized/onnx/model.onnx
 
 The expected digest is `afdb6f1a0e45b715d0bb9b11772f032c399babd23bfc31fed1c170afc848bdb1`. A matching digest checks the downloaded bytes against the repository manifest; it does not independently authenticate the upstream publisher, prove license compliance, or validate inference quality. Inspect the model card and tokenizer/config files before integration.
 
+When importing a local model folder with `python scripts/import_model.py <source-folder>`, the importer rejects non-hidden symbolic links in the source tree rather than following links into files outside the selected folder. Hidden files and directories are excluded from imports. This protects against accidental copying of linked private files; operators must still review ordinary source files and their redistribution rights.
+
 Large files require an additional truthfulness rule: do not pretend a model is in the repository when only its name is present. If the binary lives in Git LFS or external storage, the manifest and model card should make that relationship explicit.
 
 ---

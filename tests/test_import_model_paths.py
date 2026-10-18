@@ -67,6 +67,42 @@ class ImportPathTests(unittest.TestCase):
         self.assertIn("must not overlap", output.getvalue())
         self.assertEqual((destination / "weights.bin").read_bytes(), b"valuable weights")
 
+    def test_import_rejects_external_file_symlink_before_copy(self):
+        source = self.root / "source"
+        source.mkdir()
+        (source / "weights.onnx").write_bytes(b"synthetic weights")
+        private = self.root / "private.txt"
+        private.write_text("synthetic private data", encoding="utf-8")
+        (source / "private.txt").symlink_to(private)
+        destination = self.models / "demo"
+        manifest = self.root / "manifest.json"
+        output = io.StringIO()
+        with patch.object(import_model, "MANIFEST_PATH", manifest):
+            with contextlib.redirect_stderr(output), contextlib.redirect_stdout(io.StringIO()):
+                result = import_model.main([str(source), "--id", "demo"])
+        self.assertEqual(result, 1)
+        self.assertIn("Source contains symbolic link: private.txt", output.getvalue())
+        self.assertFalse(destination.exists())
+        self.assertFalse(manifest.exists())
+
+    def test_import_rejects_external_directory_symlink_before_copy(self):
+        source = self.root / "source"
+        source.mkdir()
+        (source / "weights.onnx").write_bytes(b"synthetic weights")
+        private = self.root / "private-directory"
+        private.mkdir()
+        (private / "secret.txt").write_text("synthetic private data", encoding="utf-8")
+        (source / "external").symlink_to(private, target_is_directory=True)
+        output = io.StringIO()
+        with patch.object(import_model, "MANIFEST_PATH", self.root / "manifest.json"):
+            with contextlib.redirect_stderr(output), contextlib.redirect_stdout(io.StringIO()):
+                result = import_model.main([str(source), "--id", "demo"])
+        self.assertEqual(result, 1)
+        self.assertIn("Source contains symbolic link: external", output.getvalue())
+        self.assertFalse((self.models / "demo").exists())
+        self.assertFalse((self.root / "manifest.json").exists())
+
+
 
 if __name__ == "__main__":
     unittest.main()
