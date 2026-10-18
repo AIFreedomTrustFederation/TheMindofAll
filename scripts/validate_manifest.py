@@ -188,11 +188,16 @@ def validate() -> list[str]:
         if model_root.is_symlink():
             errors.append(f"{model_id}: model directory must not be a symbolic link")
             continue
+        if not model_root.is_dir():
+            errors.append(f"{model_id}: model directory does not exist: {expected_model_path.as_posix()}")
+            continue
 
         seen_files: set[str] = set()
         file_records = model.get("files", [])
         if not isinstance(file_records, list):
             continue
+        if not file_records:
+            errors.append(f"{model_id}: must declare at least one file")
         for record in file_records:
             if not isinstance(record, dict):
                 errors.append(f"{model_id}: file record must be an object: {record!r}")
