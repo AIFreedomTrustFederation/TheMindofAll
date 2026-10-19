@@ -96,6 +96,8 @@ The expected digest is `afdb6f1a0e45b715d0bb9b11772f032c399babd23bfc31fed1c170af
 
 When importing a local model folder with `python scripts/import_model.py <source-folder>`, the importer rejects non-hidden symbolic links in the source tree rather than following links into files outside the selected folder. Hidden files and directories are excluded from imports. This protects against accidental copying of linked private files; operators must still review ordinary source files and their redistribution rights.
 
+When using `--replace`, the importer stages the new model before moving the existing directory aside. A failed copy leaves the existing model intact; a failed publish attempts to restore it. This protects against ordinary copy and publish errors, but the subsequent manifest write is not transactional, and abrupt power loss is not covered. Keep backups of valuable models.
+
 Large files require an additional truthfulness rule: do not pretend a model is in the repository when only its name is present. If the binary lives in Git LFS or external storage, the manifest and model card should make that relationship explicit.
 
 ---

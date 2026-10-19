@@ -13,6 +13,7 @@ import json
 import re
 import shutil
 import sys
+import tempfile
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -212,15 +213,36 @@ def ensure_disjoint_source(source: Path, destination: Path) -> None:
 def copy_model(source: Path, destination: Path, replace: bool) -> None:
     ensure_safe_destination(destination)
     ensure_disjoint_source(source, destination)
-    if destination.exists():
-        if not replace:
-            raise ValueError(f"Destination already exists: {destination}. Use --replace to overwrite it.")
-        shutil.rmtree(destination)
+    if destination.exists() and not replace:
+        raise ValueError(f"Destination already exists: {destination}. Use --replace to overwrite it.")
 
     def ignore_hidden(_directory: str, names: list[str]) -> set[str]:
         return {name for name in names if name.startswith(".") or name == "__pycache__"}
 
-    shutil.copytree(source, destination, ignore=ignore_hidden)
+    # Complete the copy before touching the current model. Keep both directories
+    # on the same filesystem so publishing uses directory renames.
+    staging_dir = Path(tempfile.mkdtemp(prefix=f".{destination.name}-import-", dir=destination.parent))
+    staged_model = staging_dir / "model"
+    previous_model = staging_dir / "previous"
+    keep_backup = False
+    try:
+        shutil.copytree(source, staged_model, ignore=ignore_hidden)
+        if destination.exists():
+            destination.rename(previous_model)
+        try:
+            staged_model.rename(destination)
+        except OSError:
+            if previous_model.exists():
+                try:
+                    previous_model.rename(destination)
+                except OSError:
+                    # Do not delete the only surviving copy if rollback fails.
+                    keep_backup = True
+                    raise
+            raise
+    finally:
+        if not keep_backup:
+            shutil.rmtree(staging_dir, ignore_errors=True)
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
