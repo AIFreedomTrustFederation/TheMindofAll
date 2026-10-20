@@ -21,7 +21,33 @@ class ArtifactIdentityTests(unittest.TestCase):
                 + b"a" * 64
                 + b"\nsize 22972370\n"
             )
-            self.assertEqual(artifact_identity(artifact), (22972370, "a" * 64))
+            self.assertEqual(artifact_identity(artifact, lfs_tracked=True), (22972370, "a" * 64))
+
+    def test_untracked_pointer_text_is_hashed_as_actual_file(self):
+        # An untracked text file must not impersonate a large model binary.
+        with tempfile.TemporaryDirectory() as temp:
+            artifact = Path(temp) / "weights.data"
+            content = (
+                b"version https://git-lfs.github.com/spec/v1\n"
+                + b"oid sha256:"
+                + b"a" * 64
+                + b"\nsize 22972370\n"
+            )
+            artifact.write_bytes(content)
+            self.assertEqual(
+                artifact_identity(artifact, lfs_tracked=False),
+                (len(content), hashlib.sha256(content).hexdigest()),
+            )
+
+    def test_lfs_tracked_real_bytes_are_hashed(self):
+        with tempfile.TemporaryDirectory() as temp:
+            artifact = Path(temp) / "weights.onnx"
+            content = b"real model bytes"
+            artifact.write_bytes(content)
+            self.assertEqual(
+                artifact_identity(artifact, lfs_tracked=True),
+                (len(content), hashlib.sha256(content).hexdigest()),
+            )
 
     def test_regular_file_reports_actual_identity(self):
         with tempfile.TemporaryDirectory() as temp:
