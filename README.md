@@ -110,6 +110,8 @@ When importing a local model folder with `python scripts/import_model.py <source
 
 When using `--replace`, the importer stages the new model before moving the existing directory aside. A failed copy leaves the existing model intact; a failed publish attempts to restore it. This protects against ordinary copy and publish errors, but the subsequent manifest write is not transactional, and abrupt power loss is not covered. Keep backups of valuable models.
 
+**Git LFS import boundary:** `import_model.py` marks files as `lfsTracked` based on filename extensions; it does not install Git LFS or change [`.gitattributes`](.gitattributes). Before committing an imported model, run `python scripts/validate_manifest.py` and check each declared LFS artifact with `git check-attr filter -- models/<model-id>/<artifact>` (expect `filter: lfs`). A successful import or `--dry-run` does not establish that model bytes can be downloaded, that inference works, or that redistribution is permitted.
+
 Large files require an additional truthfulness rule: do not pretend a model is in the repository when only its name is present. If the binary lives in Git LFS or external storage, the manifest and model card should make that relationship explicit.
 
 ---
