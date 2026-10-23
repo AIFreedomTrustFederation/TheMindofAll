@@ -242,11 +242,16 @@ def validate() -> list[str]:
             if bool(record.get("lfsTracked")) != is_lfs_tracked(repository_path):
                 errors.append(f"{model_id}/{normalized}: LFS declaration mismatch")
 
-        actual_files = {
-            path.relative_to(model_root).as_posix()
-            for path in model_root.rglob("*")
-            if path.is_file()
-        }
+        actual_files: set[str] = set()
+        for path in model_root.rglob("*"):
+            relative_path = path.relative_to(model_root).as_posix()
+            # rglob does not traverse directory symlinks, and is_file() misses
+            # dangling links. Check every entry, not just recorded file paths.
+            if path.is_symlink():
+                if relative_path not in seen_files:
+                    errors.append(f"{model_id}/{relative_path}: symbolic links are not allowed")
+            elif path.is_file():
+                actual_files.add(relative_path)
         for unrecorded in sorted(actual_files - seen_files):
             errors.append(f"{model_id}: unrecorded file: {unrecorded}")
 

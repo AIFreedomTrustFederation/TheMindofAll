@@ -77,7 +77,7 @@ git status --short
 
 As recorded in [`models/manifest.json`](models/manifest.json), the currently registered model is **`all-minilm-l6-v2-quantized`**, a quantized ONNX **embedding** model sourced from `Xenova/all-MiniLM-L6-v2` and intended for local Transformers.js loading. This is not a text-generation model, and a registry entry alone does not establish that a running inference service is installed or healthy.
 
-The repository's standard-library integrity check validates recorded model files, sizes, SHA-256 digests, and Git LFS pointer identities without loading entire model binaries into memory:
+The repository's standard-library integrity check validates recorded model files, sizes, SHA-256 digests, and Git LFS pointer identities without loading entire model binaries into memory. It also rejects symbolic links anywhere under registered model directories, including unrecorded, dangling, and directory links; this is a checkout-integrity check, not protection against concurrent filesystem modifications:
 
 ```bash
 python scripts/validate_manifest.py
