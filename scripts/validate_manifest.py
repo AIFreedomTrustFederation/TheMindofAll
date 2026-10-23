@@ -116,11 +116,11 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def artifact_identity(path: Path) -> tuple[int, str]:
+def artifact_identity(path: Path, *, allow_lfs_pointer: bool = True) -> tuple[int, str]:
     # LFS pointer files are small; model binaries may be many gigabytes.
     with path.open("rb") as handle:
         prefix = handle.read(200)
-    pointer = LFS_PATTERN.fullmatch(prefix)
+    pointer = LFS_PATTERN.fullmatch(prefix) if allow_lfs_pointer else None
     if pointer:
         return int(pointer.group(2)), pointer.group(1).decode("ascii")
     return path.stat().st_size, sha256_file(path)
@@ -230,7 +230,9 @@ def validate() -> list[str]:
                 errors.append(f"{model_id}/{normalized}: file resolves outside model directory")
                 continue
 
-            size, digest = artifact_identity(artifact)
+            repository_path = expected_model_path / relative
+            lfs_tracked = is_lfs_tracked(repository_path)
+            size, digest = artifact_identity(artifact, allow_lfs_pointer=lfs_tracked)
             if record.get("sizeBytes") != size:
                 errors.append(f"{model_id}/{normalized}: size mismatch")
             expected_digest = record.get("sha256")
@@ -238,8 +240,7 @@ def validate() -> list[str]:
                 errors.append(f"{model_id}/{normalized}: invalid SHA-256")
             elif expected_digest != digest:
                 errors.append(f"{model_id}/{normalized}: SHA-256 mismatch")
-            repository_path = expected_model_path / relative
-            if bool(record.get("lfsTracked")) != is_lfs_tracked(repository_path):
+            if bool(record.get("lfsTracked")) != lfs_tracked:
                 errors.append(f"{model_id}/{normalized}: LFS declaration mismatch")
 
         actual_files: set[str] = set()
