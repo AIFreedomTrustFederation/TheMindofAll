@@ -94,6 +94,18 @@ sha256sum models/all-minilm-l6-v2-quantized/onnx/model.onnx
 
 The expected digest is `afdb6f1a0e45b715d0bb9b11772f032c399babd23bfc31fed1c170afc848bdb1`. A matching digest checks the downloaded bytes against the repository manifest; it does not independently authenticate the upstream publisher, prove license compliance, or validate inference quality. Inspect the model card and tokenizer/config files before integration.
 
+### CI verification scope
+
+The [Model Integrity workflow](.github/workflows/model-integrity.yml) uses Python 3.13 and checks out the repository with Git LFS downloads disabled (`lfs: false`). It compiles the validator, runs the manifest integrity check, and executes the [Python regression tests](tests/) for bounded-memory hashing and LFS pointers, import-path and symlink rejection, staged replacement/rollback, and unrecorded model-directory entries. Run the same principal checks locally with:
+
+```bash
+python -m py_compile scripts/validate_manifest.py
+python scripts/validate_manifest.py
+python -B -m unittest discover -s tests -v
+```
+
+A green workflow verifies repository metadata and these regression behaviors; it **does not** download or execute the ONNX model, evaluate embedding quality, prove upstream provenance, or deploy an inference service. Download the LFS artifact and compare its digest separately as described above.
+
 When importing a local model folder with `python scripts/import_model.py <source-folder>`, the importer rejects non-hidden symbolic links in the source tree rather than following links into files outside the selected folder. Hidden files and directories are excluded from imports. This protects against accidental copying of linked private files; operators must still review ordinary source files and their redistribution rights.
 
 When using `--replace`, the importer stages the new model before moving the existing directory aside. A failed copy leaves the existing model intact; a failed publish attempts to restore it. This protects against ordinary copy and publish errors, but the subsequent manifest write is not transactional, and abrupt power loss is not covered. Keep backups of valuable models.
