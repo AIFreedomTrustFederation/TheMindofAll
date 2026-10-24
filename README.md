@@ -53,6 +53,12 @@ That substrate integrates with the Federation in specific ways:
 
 The preferred artifact formats—such as `safetensors`, `onnx`, and `gguf` where appropriate—support inspectability and portability. Model cards should state source, license, intended use, limitations, and loading instructions in plain language.
 
+### MoBox UXI model-registry discovery boundary
+
+The [UXI integration declaration](.aift/uxi.json) registers one JSON source, `models.local`, pointing to [`models/manifest.json`](models/manifest.json) with declared status `ready`. In the [AIFT-OS integration reader](https://github.com/AIFreedomTrustFederation/AIFT-OS/blob/main/internal/uxi/integration.go), discovery requires a local Git checkout immediately beneath the configured AIFT workspace, with the manifest's repository name matching its directory. A running AIFT-OS UXI server can list discovered declarations at `GET /v1/sources`; its governed `source.inspect` action can read the registry and record a SHA-256-backed evidence artifact. This is **read-only access to registry data**, not permission to edit model files or launch inference.
+
+The reader requires a repository-contained regular JSON source, resolves symlinks to reject paths escaping the checkout, and limits source JSON to 4 MiB (integration declarations to 256 KiB). Those limits do **not** verify or download the ONNX model binary. The `ready` value is a declaration about this JSON source, not proof of a live model service: [service metadata](.aift/services.json) still marks the repository service `planned`, and [capability metadata](.aift/capabilities.json) marks `start`, `health`, and `deploy` as `planned`. Verify LFS bytes and model execution separately before reporting runtime readiness.
+
 ---
 
 ## Book III — SOP-ALOHA-001 for Models and Memory
