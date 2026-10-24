@@ -1,5 +1,7 @@
 """Regression tests for staged model imports and safe replacement."""
 
+import contextlib
+import io
 import sys
 import tempfile
 import unittest
@@ -89,6 +91,50 @@ class ImportStagingTests(unittest.TestCase):
         self.assertEqual((destination / "weights.bin").read_bytes(), b"valuable weights")
         self.assertEqual(sorted(p.name for p in self.models.iterdir()), ["demo"])
 
+
+
+    def test_source_mutation_after_inspection_cannot_publish_stale_manifest(self):
+        source = self.root / "source"
+        source.mkdir()
+        (source / "weights.bin").write_bytes(b"inspected weights")
+        destination = self.models / "demo"
+        manifest = self.root / "manifest.json"
+        original_copytree = import_model.shutil.copytree
+
+        def mutate_before_copy(src, dst, **kwargs):
+            (source / "weights.bin").write_bytes(b"different weights")
+            return original_copytree(src, dst, **kwargs)
+
+        with patch.object(import_model, "MANIFEST_PATH", manifest):
+            with patch.object(import_model.shutil, "copytree", side_effect=mutate_before_copy):
+                with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                    result = import_model.main([str(source), "--id", "demo"])
+        self.assertEqual(result, 1)
+        self.assertFalse(destination.exists(), "unverified bytes must not be published")
+        self.assertFalse(manifest.exists(), "manifest must not advertise mismatched bytes")
+
+    def test_source_symlink_swap_cannot_publish_external_content(self):
+        source = self.root / "source"
+        source.mkdir()
+        (source / "weights.bin").write_bytes(b"inspected weights")
+        external = self.root / "private.txt"
+        external.write_bytes(b"synthetic private content")
+        destination = self.models / "demo"
+        manifest = self.root / "manifest.json"
+        original_copytree = import_model.shutil.copytree
+
+        def swap_before_copy(src, dst, **kwargs):
+            (source / "weights.bin").unlink()
+            (source / "weights.bin").symlink_to(external)
+            return original_copytree(src, dst, **kwargs)
+
+        with patch.object(import_model, "MANIFEST_PATH", manifest):
+            with patch.object(import_model.shutil, "copytree", side_effect=swap_before_copy):
+                with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                    result = import_model.main([str(source), "--id", "demo"])
+        self.assertEqual(result, 1)
+        self.assertFalse(destination.exists(), "copied external content must not be published")
+        self.assertFalse(manifest.exists())
 
 if __name__ == "__main__":
     unittest.main()

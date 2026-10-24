@@ -210,11 +210,18 @@ def ensure_disjoint_source(source: Path, destination: Path) -> None:
         raise ValueError("Source and destination directories must not overlap")
 
 
-def copy_model(source: Path, destination: Path, replace: bool) -> None:
+def copy_model(
+    source: Path,
+    destination: Path,
+    replace: bool,
+    expected_files: list[FileRecord] | None = None,
+) -> None:
     ensure_safe_destination(destination)
     ensure_disjoint_source(source, destination)
     if destination.exists() and not replace:
         raise ValueError(f"Destination already exists: {destination}. Use --replace to overwrite it.")
+    if expected_files is None:
+        expected_files, _ = inspect_source(source)
 
     def ignore_hidden(_directory: str, names: list[str]) -> set[str]:
         return {name for name in names if name.startswith(".") or name == "__pycache__"}
@@ -227,6 +234,11 @@ def copy_model(source: Path, destination: Path, replace: bool) -> None:
     keep_backup = False
     try:
         shutil.copytree(source, staged_model, ignore=ignore_hidden)
+        # The source can change after inspection. Never publish bytes that do
+        # not match the file list and digests recorded for the manifest.
+        staged_files, _ = inspect_source(staged_model)
+        if staged_files != expected_files:
+            raise ValueError("Staged model differs from inspected source; import aborted")
         if destination.exists():
             destination.rename(previous_model)
         try:
@@ -286,7 +298,7 @@ def main(argv: list[str]) -> int:
             print("dry run: no files copied and manifest not updated")
             return 0
 
-        copy_model(source, destination, args.replace)
+        copy_model(source, destination, args.replace, expected_files=files)
         write_manifest(manifest)
         print(f"imported: {destination}")
         print(f"manifest updated: {MANIFEST_PATH}")
