@@ -98,7 +98,7 @@ git lfs pull
 sha256sum models/all-minilm-l6-v2-quantized/onnx/model.onnx
 ```
 
-The expected digest is `afdb6f1a0e45b715d0bb9b11772f032c399babd23bfc31fed1c170afc848bdb1`. A matching digest checks the downloaded bytes against the repository manifest; it does not independently authenticate the upstream publisher, prove license compliance, or validate inference quality. Inspect the model card and tokenizer/config files before integration.
+The expected digest is `afdb6f1a0e45b715d0bb9b11772f032c399babd23bfc31fed1c170afc848bdb1`. A matching digest checks the downloaded bytes against the repository manifest; it does not independently authenticate the upstream publisher, prove license compliance, or validate inference quality. No model-specific model card or license text is checked into [`models/all-minilm-l6-v2-quantized/`](models/all-minilm-l6-v2-quantized/). The manifest's `source` and `license` fields are declarations, not independent verification of upstream provenance or redistribution rights. Consult the upstream model documentation and license terms, and inspect the local tokenizer/config files, before integration.
 
 ### CI verification scope
 
