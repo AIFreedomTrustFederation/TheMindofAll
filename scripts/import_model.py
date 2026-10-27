@@ -10,6 +10,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
+import stat
 import re
 import shutil
 import sys
@@ -158,10 +160,31 @@ def load_manifest() -> dict:
 
 
 def write_manifest(manifest: dict) -> None:
+    """Publish a complete manifest without truncating the existing record."""
     MANIFEST_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with MANIFEST_PATH.open("w", encoding="utf-8") as handle:
-        json.dump(manifest, handle, indent=2)
-        handle.write("\n")
+    staging_path: Path | None = None
+    try:
+        # A same-directory temporary file makes os.replace atomic on this filesystem.
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=MANIFEST_PATH.parent,
+            prefix=f".{MANIFEST_PATH.name}-",
+            suffix=".tmp",
+            delete=False,
+        ) as handle:
+            staging_path = Path(handle.name)
+            json.dump(manifest, handle, indent=2)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        # Preserve existing file access for consumers of an updated manifest.
+        if MANIFEST_PATH.is_file():
+            os.chmod(staging_path, stat.S_IMODE(MANIFEST_PATH.stat().st_mode))
+        os.replace(staging_path, MANIFEST_PATH)
+    finally:
+        if staging_path is not None:
+            staging_path.unlink(missing_ok=True)
 
 
 def ensure_safe_destination(destination: Path) -> None:
