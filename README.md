@@ -79,6 +79,8 @@ git pull --ff-only
 git status --short
 ```
 
+**Federation status and verification boundary:** [`FEDERATION.md`](FEDERATION.md) labels `git status --short` as “Verify,” while [`aift.repo.json`](aift.repo.json) declares `python3 scripts/validate_manifest.py` as the `verify` command. Git status only describes the invoking Git checkout; it does not validate model integrity. The [`status` capability](.aift/capabilities.json) is marked `ready`, but its [shell command](.aift/commands/status.sh) prints an environment-derived repository label and runs Git status without changing to TheMindofAll's root. Confirm the checkout before trusting that output, and use the explicit Python validator below for the documented manifest and artifact checks; neither establishes live inference or authorization.
+
 ### Current model inventory and integrity verification
 
 As recorded in [`models/manifest.json`](models/manifest.json), the currently registered model is **`all-minilm-l6-v2-quantized`**, a quantized ONNX **embedding** model sourced from `Xenova/all-MiniLM-L6-v2` and intended for local Transformers.js loading. This is not a text-generation model, and a registry entry alone does not establish that a running inference service is installed or healthy.
