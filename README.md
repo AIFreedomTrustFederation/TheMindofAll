@@ -42,6 +42,8 @@ The repository owns the **local model and reproducibility substrate** for its co
 - `datasets/` carries small metadata, examples, or dataset cards; large data should remain in Git LFS or external storage referenced by durable metadata.
 - `runs/` carries training, conversion, evaluation, or reproducibility records.
 
+**Dataset and run evidence boundary:** At this revision, `datasets/` and `runs/` each contain only `.gitkeep`; no dataset card, training/conversion/evaluation run record, or reproducibility result is checked in. These directories are intended storage locations, not evidence of completed experiments. The registered embedding model and its file-integrity metadata do not establish training or evaluation outcomes.
+
 That substrate integrates with the Federation in specific ways:
 
 - **AI-Freedom-Trust → TheMindofAll:** doctrine, alignment, consciousness writings, and theory material provide the intellectual questions; this repository should not transform those questions into “proven” model behavior without evidence.
