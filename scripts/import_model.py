@@ -10,6 +10,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
+import stat
 import re
 import shutil
 import sys
@@ -17,6 +19,7 @@ import tempfile
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Callable
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -158,10 +161,31 @@ def load_manifest() -> dict:
 
 
 def write_manifest(manifest: dict) -> None:
+    """Publish a complete manifest without truncating the existing record."""
     MANIFEST_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with MANIFEST_PATH.open("w", encoding="utf-8") as handle:
-        json.dump(manifest, handle, indent=2)
-        handle.write("\n")
+    staging_path: Path | None = None
+    try:
+        # A same-directory temporary file makes os.replace atomic on this filesystem.
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=MANIFEST_PATH.parent,
+            prefix=f".{MANIFEST_PATH.name}-",
+            suffix=".tmp",
+            delete=False,
+        ) as handle:
+            staging_path = Path(handle.name)
+            json.dump(manifest, handle, indent=2)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        # Preserve existing file access for consumers of an updated manifest.
+        if MANIFEST_PATH.is_file():
+            os.chmod(staging_path, stat.S_IMODE(MANIFEST_PATH.stat().st_mode))
+        os.replace(staging_path, MANIFEST_PATH)
+    finally:
+        if staging_path is not None:
+            staging_path.unlink(missing_ok=True)
 
 
 def ensure_safe_destination(destination: Path) -> None:
@@ -215,6 +239,7 @@ def copy_model(
     destination: Path,
     replace: bool,
     expected_files: list[FileRecord] | None = None,
+    publish_manifest: Callable[[], None] | None = None,
 ) -> None:
     ensure_safe_destination(destination)
     ensure_disjoint_source(source, destination)
@@ -252,6 +277,25 @@ def copy_model(
                     keep_backup = True
                     raise
             raise
+        # Retain the previous model until the manifest has been published.
+        # This recovers from exceptions, not process crashes or concurrent readers.
+        if publish_manifest is not None:
+            try:
+                publish_manifest()
+            except Exception:
+                try:
+                    destination.rename(staging_dir / "uncommitted")
+                    if previous_model.exists():
+                        previous_model.rename(destination)
+                except OSError as rollback_error:
+                    # Never delete the previous model or uncommitted bytes if
+                    # restoring the old model fails. Leave a recovery location.
+                    keep_backup = True
+                    raise RuntimeError(
+                        f"Manifest publication failed and model rollback failed; "
+                        f"recovery files retained in {staging_dir}"
+                    ) from rollback_error
+                raise
     finally:
         if not keep_backup:
             shutil.rmtree(staging_dir, ignore_errors=True)
@@ -298,8 +342,10 @@ def main(argv: list[str]) -> int:
             print("dry run: no files copied and manifest not updated")
             return 0
 
-        copy_model(source, destination, args.replace, expected_files=files)
-        write_manifest(manifest)
+        copy_model(
+            source, destination, args.replace, expected_files=files,
+            publish_manifest=lambda: write_manifest(manifest),
+        )
         print(f"imported: {destination}")
         print(f"manifest updated: {MANIFEST_PATH}")
         return 0
