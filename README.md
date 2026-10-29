@@ -55,6 +55,8 @@ That substrate integrates with the Federation in specific ways:
 
 The preferred artifact formats—such as `safetensors`, `onnx`, and `gguf` where appropriate—support inspectability and portability. Model cards should state source, license, intended use, limitations, and loading instructions in plain language.
 
+**Manual-source coverage boundary:** [`.aift/manual.json`](.aift/manual.json) declares `manualSource: ready` and lists `man0` through `man9`, but the tracked [`docs/manual/source/`](docs/manual/source/) contains authored pages only under `man0` and `man7`. The manifest marks PDF building and web publication as `planned`; its section list does not establish ten completed manual sections or a published manual.
+
 ### MoBox UXI model-registry discovery boundary
 
 The [UXI integration declaration](.aift/uxi.json) registers one JSON source, `models.local`, pointing to [`models/manifest.json`](models/manifest.json) with declared status `ready`. In the [AIFT-OS integration reader](https://github.com/AIFreedomTrustFederation/AIFT-OS/blob/main/internal/uxi/integration.go), discovery requires a local Git checkout immediately beneath the configured AIFT workspace, with the manifest's repository name matching its directory. A running AIFT-OS UXI server can list discovered declarations at `GET /v1/sources`; its governed `source.inspect` action can read the registry and record a SHA-256-backed evidence artifact. This is **read-only access to registry data**, not permission to edit model files or launch inference.
