@@ -1,4 +1,4 @@
-# TheMindofAll UNIX Manual Manual
+# TheMindofAll UNIX Manual
 
 This directory contains the UNIX-style manual source for this repository.
 
