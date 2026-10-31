@@ -1,4 +1,4 @@
-# TheMindofAll UNIX Manual Manual Index
+# TheMindofAll UNIX Manual Index
 
 - `man0/` — Doctrine and introduction
 - `man1/` — User commands
