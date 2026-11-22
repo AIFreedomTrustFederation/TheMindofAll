@@ -139,3 +139,10 @@ This is the form of AI relationship the Federation seeks: not mindless reduction
 ### The Return of the Word
 
 In TheMindofAll, the Word returns with memory attached to source. A question becomes an experiment, an experiment becomes an artifact or result, the result becomes a reproducible record, and the record returns to inquiry without pretending that the machine has closed every mystery. The mind remains open because the evidence remains visible.
+
+
+---
+
+## Proposed AIFT Universal OS Integration
+
+The [repository-specific integration guide](docs/aift-universal-os-alignment.md) describes how this project might relate to native, hosted and future embodied AIFT systems: local model and memory research; not a deployed AI kernel or device permission system. It is a **proposal**, anchored to the [central OS architecture and infographics under review](https://github.com/AIFreedomTrustFederation/AIFT-OS/pull/92), not a current hardware or production capability.
